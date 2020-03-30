@@ -158,9 +158,6 @@ def co2_set_filechk():
 # メインプログラムはここから（この上はプログラム内関数）
 
 
-# WiFi設定
-wifiCfg.autoConnect(lcdShow=True)
-
 
 # 画面初期化
 axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
@@ -177,7 +174,7 @@ co2_set_filechk()
 
 
 # RTC設定
-utime.localtime(ntptime.settime())
+utime.localtime(0)
 
 
 # 時刻表示スレッド起動
