@@ -91,10 +91,12 @@ def draw_co2():
         fc = lcd.LIGHTGREY
     else:
         if co2 >= CO2_RED:  # CO2濃度閾値超え時は文字が赤くなる
+            M5Led.on()
             fc = lcd.RED
             if lcd_mute:   # CO2濃度閾値超え時はLCD ON
                 axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
         else:
+            M5Led.off()
             fc = lcd.WHITE
             if lcd_mute:
                 axp.setLDO2Vol(0)   # バックライト輝度調整（中くらい）
@@ -156,7 +158,6 @@ def co2_set_filechk():
 
 
 # メインプログラムはここから（この上はプログラム内関数）
-
 
 
 # 画面初期化
