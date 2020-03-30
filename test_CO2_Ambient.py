@@ -9,16 +9,12 @@ import ntptime
 
 
 # 変数宣言
-Am_err = 1     # グローバル
 Disp_mode = 0     # グローバル
 lcd_mute = False  # グローバル
 data_mute = False  # グローバル
-am_interval = 60    # Ambientへデータを送るサイクル（秒）
 co2_interval = 5     # MH-19Bへco2測定値要求コマンドを送るサイクル（秒）
 TIMEOUT = 30    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 CO2_RED = 1000  # co2濃度の換気閾値（ppm）のデフォルト値
-AM_ID = None
-AM_WKEY = None
 co2 = 0
 
 
@@ -37,25 +33,14 @@ axp = AXPCompat()
 # 時計表示スレッド関数
 def time_count():
     global Disp_mode
-    global Am_err
 
     while True:
-        if Am_err == 0:  # Ambient通信不具合発生時は時計の文字が赤くなる
-            fc = lcd.WHITE
-        else:
-            fc = lcd.RED
+        fc = lcd.WHITE
 
         if Disp_mode == 1:  # 表示回転処理
             lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
-            lcd.font(lcd.FONT_DefaultSmall, rotate=90)
-            lcd.print('{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(*
-                                                                     time.localtime()[:6]), 78, 40, fc)
         else:
             lcd.rect(0, 0, 13, 160, lcd.BLACK, lcd.BLACK)
-            lcd.font(lcd.FONT_DefaultSmall, rotate=270)
-            lcd.print('{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(*
-                                                                     time.localtime()[:6]), 2, 125, fc)
-
         utime.sleep(1)
 
 
@@ -91,12 +76,6 @@ def draw_lcd():
     global Disp_mode
 
     lcd.clear()
-
-    if Disp_mode == 1:
-        lcd.line(66, 0, 66, 160, lcd.LIGHTGREY)
-    else:
-        lcd.line(14, 0, 14, 160, lcd.LIGHTGREY)
-
     draw_co2()
 
 
@@ -109,7 +88,7 @@ def draw_co2():
     global co2
 
     if data_mute or (co2 == 0):  # タイムアウトで表示ミュートされてるか、初期値のままならco2値非表示（黒文字化）
-        fc = lcd.BLACK
+        fc = lcd.LIGHTGREY
     else:
         if co2 >= CO2_RED:  # CO2濃度閾値超え時は文字が赤くなる
             fc = lcd.RED
@@ -151,8 +130,6 @@ def checksum_chk(data):
 def co2_set_filechk():
     global CO2_RED
     global TIMEOUT
-    global AM_ID
-    global AM_WKEY
 
     scanfile_flg = False
     for file_name in uos.listdir('/flash'):
@@ -172,13 +149,7 @@ def co2_set_filechk():
                     if int(filetxt[1]) >= 1:
                         TIMEOUT = int(filetxt[1])
                         print('- TIMEOUT: ' + str(TIMEOUT))
-                elif filetxt[0] == 'AM_ID':
-                    AM_ID = str(filetxt[1])
-                    print('- AM_ID: ' + str(AM_ID))
-                elif filetxt[0] == 'AM_WKEY':
-                    if len(filetxt[1]) == 16:
-                        AM_WKEY = str(filetxt[1])
-                        print('- AM_WKEY: ' + str(AM_WKEY))
+
     else:
         print('>> no [co2_set.txt] !')
     return scanfile_flg
@@ -205,12 +176,6 @@ mhz19b.init(9600, bits=8, parity=None, stop=1)
 co2_set_filechk()
 
 
-# Ambient設定
-if (AM_ID is not None) and (AM_WKEY is not None):  # Ambient設定情報があった場合
-    import ambient
-    am_co2 = ambient.Ambient(AM_ID, AM_WKEY)
-
-
 # RTC設定
 utime.localtime(ntptime.settime())
 
@@ -226,7 +191,6 @@ btnB.wasPressed(buttonB_wasPressed)
 
 # タイムカウンタ初期値設定
 co2_tc = utime.time()
-am_tc = utime.time()
 
 
 # メインルーチン
@@ -243,22 +207,6 @@ while True:
             co2 = mhz19b_data[2] * 256 + mhz19b_data[3]
             data_mute = False
             draw_co2()
-            print(str(co2) + ' ppm / ' + str(co2_tc))
-            if (AM_ID is not None) and (
-                    AM_WKEY is not None):  # Ambient設定情報があった場合
-                if (utime.time() -
-                        am_tc) >= am_interval:      # インターバル値の間隔でAmbientへsendする
-                    am_tc = utime.time()
-                    try:                                       # ネットワーク不通発生などで例外エラー終了されない様に try except しとく
-                        r = am_co2.send({'d1': co2})
-                        print('Ambient send OK! / ' +
-                              str(r.status_code) + ' / ' + str(Am_err))
-                        Am_err = 0
-                        am_tc = utime.time()
-                        r.close()
-                    except BaseException:
-                        print('Ambient send ERR! / ' + str(Am_err))
-                        Am_err = Am_err + 1
         utime.sleep(1)
 
     if (utime.time() - co2_tc) >= TIMEOUT:  # co2応答が一定時間無い場合はCO2値表示のみオフ
