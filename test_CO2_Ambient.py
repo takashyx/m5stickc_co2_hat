@@ -6,6 +6,8 @@ import utime
 import uos
 import _thread
 import ntptime
+import math
+import time
 
 
 # 変数宣言
@@ -30,18 +32,28 @@ class AXPCompat(object):
 axp = AXPCompat()
 
 
-# 時計表示スレッド関数
-def time_count():
-    global Disp_mode
+# PWM用パルス関数
+def pulse(l, t):
+    for i in range(100):
+        l.duty(int((math.sin(i / 50 * math.pi) * 50) + 50))
+        time.sleep_ms(t)
+
+
+# LED PWMスレッド関数
+def led_controller():
+    global CO2_RED
+    global co2
+
+    # setup LED PWM
+    frequency = 5000
+    g10 = machine.PWM(machine.Pin(10), frequency)
 
     while True:
-        fc = lcd.WHITE
-
-        if Disp_mode == 1:  # 表示回転処理
-            lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
+        if co2 >= CO2_RED:
+            pulse(g10, 10)
         else:
-            lcd.rect(0, 0, 13, 160, lcd.BLACK, lcd.BLACK)
-        utime.sleep(1)
+            g10.duty(100)
+            utime.sleep(1)
 
 
 # 表示OFFボタン処理スレッド関数
@@ -91,12 +103,10 @@ def draw_co2():
         fc = lcd.LIGHTGREY
     else:
         if co2 >= CO2_RED:  # CO2濃度閾値超え時は文字が赤くなる
-            M5Led.on()
             fc = lcd.RED
             if lcd_mute:   # CO2濃度閾値超え時はLCD ON
                 axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
         else:
-            M5Led.off()
             fc = lcd.WHITE
             if lcd_mute:
                 axp.setLDO2Vol(0)   # バックライト輝度調整（中くらい）
@@ -179,7 +189,7 @@ utime.localtime(0)
 
 
 # 時刻表示スレッド起動
-_thread.start_new_thread(time_count, ())
+_thread.start_new_thread(led_controller, ())
 
 
 # ボタン検出スレッド起動
