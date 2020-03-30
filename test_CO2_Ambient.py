@@ -47,13 +47,18 @@ def led_controller():
     # setup LED PWM
     frequency = 5000
     g10 = machine.PWM(machine.Pin(10), frequency)
+    for i in range(3):
+        g10.duty(0)
+        time.sleep_ms(100)
+        g10.duty(100)
+        time.sleep_ms(100)
 
     while True:
-        if co2 >= CO2_RED:
-            pulse(g10, 10)
+        if co2 >= CO2_RED and not lcd_mute:
+            pulse(g10, 15)
         else:
             g10.duty(100)
-            utime.sleep(1)
+            time.sleep_ms(200)
 
 
 # 表示OFFボタン処理スレッド関数
@@ -104,12 +109,8 @@ def draw_co2():
     else:
         if co2 >= CO2_RED:  # CO2濃度閾値超え時は文字が赤くなる
             fc = lcd.RED
-            if lcd_mute:   # CO2濃度閾値超え時はLCD ON
-                axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
         else:
             fc = lcd.WHITE
-            if lcd_mute:
-                axp.setLDO2Vol(0)   # バックライト輝度調整（中くらい）
 
     if Disp_mode == 1:  # 表示回転処理
         lcd.rect(0, 0, 65, 160, lcd.BLACK, lcd.BLACK)
