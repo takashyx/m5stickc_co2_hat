@@ -5,7 +5,6 @@ import gc
 import utime
 import uos
 import _thread
-import ntptime
 import math
 import time
 
