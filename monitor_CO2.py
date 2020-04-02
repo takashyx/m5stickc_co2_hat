@@ -95,7 +95,19 @@ def draw_lcd():
     draw_co2()
 
 
-# CO2値表示処理関数
+# initializing表示関数
+def draw_loading():
+    lcd.clear()
+    fc = lcd.YELLOW
+    loading_str = "Loading"
+    if Disp_mode == 1:  # 表示回転処理
+        lcd.font(lcd.FONT_DejaVu18, rotate=90)  # co2値の表示
+        lcd.print(loading_str, 37, 105 - (len(loading_str) * 18), fc)
+    else:
+        lcd.font(lcd.FONT_DejaVu18, rotate=270)  # co2値の表示
+        lcd.print(loading_str, 43, 55 + (len(loading_str) * 18), fc)
+
+
 def draw_co2():
     global Disp_mode
     global lcd_mute
@@ -172,34 +184,31 @@ def co2_set_filechk():
 
 # 画面初期化
 axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
-draw_lcd()
-
 
 # MH-19B UART設定
 mhz19b = machine.UART(1, tx=0, rx=26)
 mhz19b.init(9600, bits=8, parity=None, stop=1)
 
-
 # ユーザー設定ファイル読み込み
 co2_set_filechk()
 
-
 # RTC設定
 utime.localtime(0)
-
-
-# 時刻表示スレッド起動
-_thread.start_new_thread(led_controller, ())
-
 
 # ボタン検出スレッド起動
 btnA.wasPressed(buttonA_wasPressed)
 btnB.wasPressed(buttonB_wasPressed)
 
-
 # タイムカウンタ初期値設定
 co2_tc = utime.time()
 
+draw_loading()
+utime.sleep(3)
+
+# LED表示スレッド起動
+_thread.start_new_thread(led_controller, ())
+
+utime.sleep(0.5)
 
 # メインルーチン
 while True:
@@ -221,5 +230,5 @@ while True:
         data_mute = True
         draw_co2()
 
-    utime.sleep(0.1)
+    utime.sleep(0.5)
     gc.collect()
