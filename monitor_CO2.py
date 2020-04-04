@@ -136,18 +136,24 @@ def draw_co2():
         else:
             fc = lcd.WHITE
 
+    if str(co2) == '0':
+        co2_str = '---'
+    else:
+        co2_str = str(co2)
+
     if Disp_mode == 1:  # 表示回転処理
         lcd.rect(0, 0, 65, 160, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate=90)  # 単位(ppm)の表示
         lcd.print('ppm', 37, 105, fc)
         lcd.font(lcd.FONT_DejaVu24, rotate=90)  # co2値の表示
-        lcd.print(str(co2), 40, 125 - (len(str(co2)) * 24), fc)
+
+        lcd.print(co2_str, 40, 125 - (len(co2_str) * 24), fc)
     else:
         lcd.rect(15, 0, 80, 160, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate=270)  # 単位(ppm)の表示
         lcd.print('ppm', 43, 55, fc)
         lcd.font(lcd.FONT_DejaVu24, rotate=270)  # co2値の表示
-        lcd.print(str(co2), 40, 35 + (len(str(co2)) * 24), fc)
+        lcd.print(co2_str, 40, 35 + (len(co2_str) * 24), fc)
 
 
 # MH-Z19Bデータのチェックサム確認関数
