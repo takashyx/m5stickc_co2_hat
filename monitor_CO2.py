@@ -17,6 +17,7 @@ co2_interval = 5     # MH-19Bへco2測定値要求コマンドを送るサイク
 TIMEOUT = 30    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 CO2_RED = 1000  # co2濃度の換気閾値（ppm）のデフォルト値
 co2 = 0
+preheat_count = 180  # センサー安定後数値が取れるようになるまでの時間
 
 
 # @cinimlさんのファーム差分吸収ロジック
@@ -78,34 +79,46 @@ def buttonA_wasPressed():
 # 表示切替ボタン処理スレッド関数
 def buttonB_wasPressed():
     global Disp_mode
-
     if Disp_mode == 1:
         Disp_mode = 0
     else:
         Disp_mode = 1
-
     draw_lcd()
 
 
-# 表示モード切替時の枠描画処理関数
-def draw_lcd():
+def preheat_timer_count():
     global Disp_mode
+    global preheat_count
+
+    lcd.clear()
+    while True:
+        if preheat_count > 0:
+            fc = lcd.YELLOW
+            status = "Preheating... " + str(preheat_count)
+            preheat_count = preheat_count - 1
+        else:
+            fc = lcd.WHITE
+            status = "Working"
+
+        if Disp_mode == 1:  # 表示回転処理
+            lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
+            lcd.line(66, 0, 66, 160, lcd.LIGHTGREY)
+            lcd.font(lcd.FONT_DefaultSmall, rotate=90)
+            lcd.print(status, 78, 40, fc)
+        else:
+            lcd.rect(0, 0, 13, 160, lcd.BLACK, lcd.BLACK)
+            lcd.line(14, 0, 14, 160, lcd.LIGHTGREY)
+            lcd.font(lcd.FONT_DefaultSmall, rotate=270)
+            lcd.print(status, 2, 125, fc)
+        utime.sleep(1)
+
+# 表示モード切替時の枠描画処理関数
+
+
+def draw_lcd():
 
     lcd.clear()
     draw_co2()
-
-
-# initializing表示関数
-def draw_loading():
-    lcd.clear()
-    fc = lcd.YELLOW
-    loading_str = "Loading"
-    if Disp_mode == 1:  # 表示回転処理
-        lcd.font(lcd.FONT_DejaVu18, rotate=90)  # co2値の表示
-        lcd.print(loading_str, 37, 105 - (len(loading_str) * 18), fc)
-    else:
-        lcd.font(lcd.FONT_DejaVu18, rotate=270)  # co2値の表示
-        lcd.print(loading_str, 43, 55 + (len(loading_str) * 18), fc)
 
 
 def draw_co2():
@@ -202,13 +215,11 @@ btnB.wasPressed(buttonB_wasPressed)
 # タイムカウンタ初期値設定
 co2_tc = utime.time()
 
-draw_loading()
-utime.sleep(3)
-
 # LED表示スレッド起動
 _thread.start_new_thread(led_controller, ())
 
-utime.sleep(0.5)
+# タイマー表示スレッド起動
+_thread.start_new_thread(preheat_timer_count, ())
 
 # メインルーチン
 while True:
