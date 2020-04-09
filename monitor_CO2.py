@@ -207,15 +207,16 @@ def co2_set_filechk():
 # 画面初期化
 axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
 
-# MH-19B UART設定
-mhz19b = machine.UART(1, tx=0, rx=26)
-mhz19b.init(9600, bits=8, parity=None, stop=1)
-
 # ユーザー設定ファイル読み込み
 co2_set_filechk()
 
 # RTC設定
 utime.localtime(0)
+
+# MH-19B UART設定
+mhz19b = machine.UART(1, tx=0, rx=26)
+mhz19b.init(9600, bits=8, parity=None, stop=1)
+mhz19b.read()
 
 # ボタン検出スレッド起動
 btnA.wasPressed(buttonA_wasPressed)
@@ -234,6 +235,7 @@ _thread.start_new_thread(preheat_timer_count, ())
 while True:
     if (utime.time() - co2_tc) >= co2_interval:  # co2要求コマンド送信
         mhz19b_data = bytearray(9)
+        mhz19b.read()  # clear buffer
         mhz19b.write(b'\xff\x01\x86\x00\x00\x00\x00\x00\x79')   # co2測定値リクエスト
         utime.sleep(0.1)
         mhz19b.readinto(mhz19b_data, len(mhz19b_data))
