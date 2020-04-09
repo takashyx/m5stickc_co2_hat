@@ -15,7 +15,8 @@ lcd_mute = False  # グローバル
 data_mute = False  # グローバル
 co2_interval = 5     # MH-19Bへco2測定値要求コマンドを送るサイクル（秒）
 TIMEOUT = 30    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
-CO2_RED = 1000  # co2濃度の換気閾値（ppm）のデフォルト値
+CO2_RED = 1500  # co2濃度の赤色閾値（ppm）
+CO2_YELLOW = 1000  # co2濃度の黄色閾値（ppm）
 co2 = 0
 preheat_count = 180  # センサー安定後数値が取れるようになるまでの時間
 
@@ -98,7 +99,7 @@ def preheat_timer_count():
             preheat_count = preheat_count - 1
         else:
             fc = lcd.WHITE
-            status = "Working"
+            status = "OK"
 
         if Disp_mode == 1:  # 表示回転処理
             lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
@@ -133,6 +134,8 @@ def draw_co2():
     else:
         if co2 >= CO2_RED:  # CO2濃度閾値超え時は文字が赤くなる
             fc = lcd.RED
+        elif co2 >= CO2_YELLOW:  # CO2濃度閾値超え時は文字が黄色くなる
+            fc = lcd.YELLOW
         else:
             fc = lcd.WHITE
 
