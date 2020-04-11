@@ -56,10 +56,10 @@ def led_controller():
 
     while True:
         if co2 >= CO2_RED and not lcd_mute:
-            pulse(g10, 15)
+            pulse(g10, 10)
         else:
             g10.duty(100)
-            time.sleep_ms(200)
+            time.sleep_ms(100)
 
 
 # 表示OFFボタン処理スレッド関数
@@ -127,9 +127,10 @@ def draw_co2():
     global lcd_mute
     global data_mute
     global CO2_RED
+    global CO2_YELLOW
     global co2
 
-    if data_mute or (co2 == 0):  # タイムアウトで表示ミュートされてるか、初期値のままならco2値非表示（黒文字化）
+    if data_mute or (co2 == 0):  # タイムアウトで表示ミュートされてるか、初期値のままならco2値非表示（灰文字化）
         fc = lcd.LIGHTGREY
     else:
         if co2 >= CO2_RED:  # CO2濃度閾値超え時は文字が赤くなる
@@ -191,6 +192,10 @@ def co2_set_filechk():
                     if int(filetxt[1]) >= 1:
                         CO2_RED = int(filetxt[1])
                         print('- CO2_RED: ' + str(CO2_RED))
+                if filetxt[0] == 'CO2_YELLOW':
+                    if int(filetxt[1]) >= 1:
+                        CO2_YELLOW = int(filetxt[1])
+                        print('- CO2_YELLOW: ' + str(CO2_YELLOW))
                 elif filetxt[0] == 'TIMEOUT':
                     if int(filetxt[1]) >= 1:
                         TIMEOUT = int(filetxt[1])
@@ -205,7 +210,7 @@ def co2_set_filechk():
 
 
 # 画面初期化
-axp.setLDO2Vol(2.7)  # バックライト輝度調整（中くらい）
+axp.setLDO2Vol(2.8)  # バックライト輝度調整（中くらい）
 
 # ユーザー設定ファイル読み込み
 co2_set_filechk()
