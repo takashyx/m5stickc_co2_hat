@@ -13,12 +13,13 @@ import time
 Disp_mode = 0     # グローバル
 lcd_mute = False  # グローバル
 data_mute = False  # グローバル
-co2_interval = 5     # MH-19Bへco2測定値要求コマンドを送るサイクル（秒）
+co2_interval = 1     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
 TIMEOUT = 30    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 CO2_RED = 1500  # co2濃度の赤色閾値（ppm）
 CO2_YELLOW = 1000  # co2濃度の黄色閾値（ppm）
 co2 = 0
-preheat_count = 180  # センサー安定後数値が取れるようになるまでの時間
+co2_str = '---'
+preheat_count = 180  # センサー安定後数値が取れるようになるまでの時間 MH-19B 180 MH-19C 60
 
 
 # @cinimlさんのファーム差分吸収ロジック
@@ -84,7 +85,11 @@ def buttonB_wasPressed():
         Disp_mode = 0
     else:
         Disp_mode = 1
-    draw_lcd()
+
+    lcd_clear()
+    draw_co2()
+
+
 
 
 def preheat_timer_count():
@@ -102,24 +107,19 @@ def preheat_timer_count():
             status = "OK"
 
         if Disp_mode == 1:  # 表示回転処理
-            lcd.rect(67, 0, 80, 160, lcd.BLACK, lcd.BLACK)
-            lcd.line(66, 0, 66, 160, lcd.LIGHTGREY)
-            lcd.font(lcd.FONT_DefaultSmall, rotate=90)
-            lcd.print(status, 78, 40, fc)
+            lcd.rect(110, 0, 135, 240, lcd.BLACK, lcd.BLACK)
+            lcd.line(111, 0, 111, 240, lcd.LIGHTGREY)
+            lcd.font(lcd.FONT_DejaVu18, rotate=90)
+            lcd.print(status, 131, 30, fc)
         else:
-            lcd.rect(0, 0, 13, 160, lcd.BLACK, lcd.BLACK)
-            lcd.line(14, 0, 14, 160, lcd.LIGHTGREY)
-            lcd.font(lcd.FONT_DefaultSmall, rotate=270)
-            lcd.print(status, 2, 125, fc)
+            lcd.rect(0, 0, 24, 240, lcd.BLACK, lcd.BLACK)
+            lcd.line(24, 0, 24, 240, lcd.LIGHTGREY)
+            lcd.font(lcd.FONT_DejaVu18, rotate=270)
+            lcd.print(status, 4, 210, fc)
         utime.sleep(1)
 
 # 表示モード切替時の枠描画処理関数
 
-
-def draw_lcd():
-
-    lcd.clear()
-    draw_co2()
 
 
 def draw_co2():
@@ -129,6 +129,7 @@ def draw_co2():
     global CO2_RED
     global CO2_YELLOW
     global co2
+    global co2_str
 
     if data_mute or (co2 == 0):  # タイムアウトで表示ミュートされてるか、初期値のままならco2値非表示（灰文字化）
         fc = lcd.LIGHTGREY
@@ -144,20 +145,32 @@ def draw_co2():
         co2_str = '---'
     else:
         co2_str = str(co2)
+    # if co2_str == '1000':
+    #     co2_str = '555'
+    # else:
+    #     co2_str = '1000'
+
 
     if Disp_mode == 1:  # 表示回転処理
-        lcd.rect(0, 0, 65, 160, lcd.BLACK, lcd.BLACK)
+        lcd.rect(0, 0, 111, 240, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate=90)  # 単位(ppm)の表示
-        lcd.print('ppm', 37, 105, fc)
-        lcd.font(lcd.FONT_DejaVu24, rotate=90)  # co2値の表示
-
-        lcd.print(co2_str, 40, 125 - (len(co2_str) * 24), fc)
+        lcd.print('ppm', 103, 180, fc)
+        lcd.font(lcd.FONT_DejaVu72, rotate=90)  # co2値の表示
+        co2_str_w = int(lcd.textWidth(co2_str))
+        lcd.print(co2_str, 70, (222 - co2_str_w), fc)
     else:
-        lcd.rect(15, 0, 80, 160, lcd.BLACK, lcd.BLACK)
+        lcd.rect(25, 0, 135, 240, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate=270)  # 単位(ppm)の表示
-        lcd.print('ppm', 43, 55, fc)
-        lcd.font(lcd.FONT_DejaVu24, rotate=270)  # co2値の表示
-        lcd.print(co2_str, 40, 35 + (len(co2_str) * 24), fc)
+        lcd.print('ppm', 32, 60, fc)
+        lcd.font(lcd.FONT_DejaVu72, rotate=0)  # co2値の表示
+        co2_str_w = int(lcd.textWidth(co2_str))
+        lcd.font(lcd.FONT_DejaVu72, rotate=270)  # co2値の表示
+        # TODO: workaround lcd.print Y max 169.
+        if (20 + co2_str_w) > 169:
+            y_wa = 169
+        else:
+            y_wa = (20 + co2_str_w)
+        lcd.print(co2_str, 65, y_wa, fc)
 
 
 # MH-Z19Bデータのチェックサム確認関数
@@ -257,5 +270,5 @@ while True:
         data_mute = True
         draw_co2()
 
-    utime.sleep(0.5)
+    utime.sleep(0.2)
     gc.collect()
