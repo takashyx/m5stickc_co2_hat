@@ -14,12 +14,12 @@ Disp_mode = 0     # グローバル
 lcd_mute = False  # グローバル
 data_mute = False  # グローバル
 co2_interval = 1     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
-TIMEOUT = 30    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
-CO2_RED = 1500  # co2濃度の赤色閾値（ppm）
+TIMEOUT = 5    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
+CO2_RED = 1500  # co2濃度の赤色閾値（ppm） LEDも点滅
 CO2_YELLOW = 1000  # co2濃度の黄色閾値（ppm）
 co2 = 0
 co2_str = '---'
-preheat_count = 180  # センサー安定後数値が取れるようになるまでの時間 MH-19B 180 MH-19C 60
+preheat_count = 60  # センサー安定後数値が取れるようになるまでの時間 MH-19B :180 MH-19C:60
 
 
 # @cinimlさんのファーム差分吸収ロジック
@@ -42,7 +42,7 @@ def pulse(l, t):
 
 
 # LED PWMスレッド関数
-def led_controller():
+def threadfunc_led_controller():
     global CO2_RED
     global co2
 
@@ -90,9 +90,7 @@ def buttonB_wasPressed():
     draw_co2()
 
 
-
-
-def preheat_timer_count():
+def threadfunc_preheat_timer_count():
     global Disp_mode
     global preheat_count
 
@@ -121,7 +119,6 @@ def preheat_timer_count():
 # 表示モード切替時の枠描画処理関数
 
 
-
 def draw_co2():
     global Disp_mode
     global lcd_mute
@@ -145,31 +142,27 @@ def draw_co2():
         co2_str = '---'
     else:
         co2_str = str(co2)
-    # if co2_str == '1000':
-    #     co2_str = '555'
-    # else:
-    #     co2_str = '1000'
 
 
     if Disp_mode == 1:  # 表示回転処理
         lcd.rect(0, 0, 111, 240, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate=90)  # 単位(ppm)の表示
-        lcd.print('ppm', 103, 180, fc)
+        lcd.print('CO2 ppm', 103, 130, fc)
         lcd.font(lcd.FONT_DejaVu72, rotate=90)  # co2値の表示
         co2_str_w = int(lcd.textWidth(co2_str))
-        lcd.print(co2_str, 70, (222 - co2_str_w), fc)
+        lcd.print(co2_str, 70, (210 - co2_str_w), fc)
     else:
         lcd.rect(25, 0, 135, 240, lcd.BLACK, lcd.BLACK)
         lcd.font(lcd.FONT_DejaVu18, rotate=270)  # 単位(ppm)の表示
-        lcd.print('ppm', 32, 60, fc)
+        lcd.print('CO2 ppm', 32, 110, fc)
         lcd.font(lcd.FONT_DejaVu72, rotate=0)  # co2値の表示
         co2_str_w = int(lcd.textWidth(co2_str))
         lcd.font(lcd.FONT_DejaVu72, rotate=270)  # co2値の表示
         # TODO: workaround lcd.print Y max 169.
-        if (20 + co2_str_w) > 169:
+        if (30 + co2_str_w) > 169:
             y_wa = 169
         else:
-            y_wa = (20 + co2_str_w)
+            y_wa = (10 + co2_str_w)
         lcd.print(co2_str, 65, y_wa, fc)
 
 
@@ -223,7 +216,7 @@ def co2_set_filechk():
 
 
 # 画面初期化
-axp.setLDO2Vol(2.8)  # バックライト輝度調整（中くらい）
+axp.setLDO2Vol(2.6)  # バックライト輝度調整（中くらい）
 
 # ユーザー設定ファイル読み込み
 co2_set_filechk()
@@ -244,10 +237,11 @@ btnB.wasPressed(buttonB_wasPressed)
 co2_tc = utime.time()
 
 # LED表示スレッド起動
-_thread.start_new_thread(led_controller, ())
+_thread.start_new_thread(threadfunc_led_controller, ())
 
 # タイマー表示スレッド起動
-_thread.start_new_thread(preheat_timer_count, ())
+_thread.start_new_thread(threadfunc_preheat_timer_count, ())
+
 
 # メインルーチン
 while True:
