@@ -5,29 +5,31 @@ import utime
 import uos
 import _thread
 import math
+import framebuf
 
 
-# 変数宣言
+CO2_INTERVAL = const(1000)     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
+TIMEOUT = const(5000)    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
+CO2_RED = const(1500)  # co2濃度の赤色閾値（ppm） LEDも点滅
+CO2_YELLOW = const(1000)  # co2濃度の黄色閾値（ppm）
+
+DARK_RED = const(0x6F0000)
+DARK_YELLOW = const(0x5F5F00)
+DARKER_RED = const(0x4F0000)
+DARKER_YELLOW = const(0x2F3F00)
+DARK_WHITE = const(0x3F3F3F)
+
+
 lcd_mute = False  # グローバル
 data_mute = False  # グローバル
 disp_mode = 0
 
-co2_interval = 1000     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
-TIMEOUT = 5000    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
-CO2_RED = 1500  # co2濃度の赤色閾値（ppm） LEDも点滅
-CO2_YELLOW = 1000  # co2濃度の黄色閾値（ppm）
 co2 = 0
 co2_str = '---'
 preheat_count_sec = 60  # センサー安定後数値が取れるようになるまでの時間 MH-19B :180 MH-19C:60
 
 preheat_status = ""
 preheat_status_fc = lcd.BLACK
-
-DARK_RED = 0x6F0000
-DARK_YELLOW = 0x5F5F00
-DARKER_RED = 0x4F0000
-DARKER_YELLOW = 0x2F3F00
-DARK_WHITE = 0x3F3F3F
 
 
 # graph class ring buffer and draw
@@ -371,7 +373,7 @@ _thread.start_new_thread(threadfunc_led_controller, ())
 
 # メインルーチン（初期設定と描画ループ）
 while True:
-    if (utime.ticks_ms() - co2_tc) >= co2_interval:  # co2要求コマンド送信
+    if (utime.ticks_ms() - co2_tc) >= CO2_INTERVAL:  # co2要求コマンド送信
         mhz19b_data = bytearray(9)
         mhz19b.read()  # clear buffer
         mhz19b.write(b'\xff\x01\x86\x00\x00\x00\x00\x00\x79')   # co2測定値リクエスト
@@ -392,4 +394,4 @@ while True:
         data_mute = True
         draw(0)
 
-    utime.sleep_ms(500)
+    utime.sleep_ms(200)
