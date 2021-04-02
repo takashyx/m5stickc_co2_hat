@@ -5,7 +5,6 @@ import utime
 import uos
 import _thread
 import math
-import framebuf
 
 
 CO2_INTERVAL = const(1000)     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
@@ -302,47 +301,9 @@ def checksum_chk(data):
         return False
 
 
-# co2_set.txtの存在/中身チェック関数
-def co2_set_filechk():
-    global CO2_RED
-    global TIMEOUT
-
-    scanfile_flg = False
-    for file_name in uos.listdir('/flash'):
-        if file_name == 'co2_set.txt':
-            scanfile_flg = True
-
-    if scanfile_flg:
-        print('>> found [co2_set.txt] !')
-        with open('/flash/co2_set.txt', 'r') as f:
-            for file_line in f:
-                filetxt = file_line.strip().split(':')
-                if filetxt[0] == 'CO2_RED':
-                    if int(filetxt[1]) >= 1:
-                        CO2_RED = int(filetxt[1])
-                        print('- CO2_RED: ' + str(CO2_RED))
-                if filetxt[0] == 'CO2_YELLOW':
-                    if int(filetxt[1]) >= 1:
-                        CO2_YELLOW = int(filetxt[1])
-                        print('- CO2_YELLOW: ' + str(CO2_YELLOW))
-                elif filetxt[0] == 'TIMEOUT':
-                    if int(filetxt[1]) >= 1:
-                        TIMEOUT = int(filetxt[1])
-                        print('- TIMEOUT: ' + str(TIMEOUT))
-
-    else:
-        print('>> no [co2_set.txt] !')
-    return scanfile_flg
-
-
 # メインプログラムはここから（この上はプログラム内関数）
-
-
 # 画面初期化
 axp.setLDO2Vol(2.8)  # バックライト輝度調整（中くらい）
-
-# ユーザー設定ファイル読み込み
-co2_set_filechk()
 
 # RTC設定
 utime.localtime(0)
