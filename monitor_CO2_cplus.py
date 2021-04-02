@@ -12,7 +12,7 @@ lcd_mute = False  # グローバル
 data_mute = False  # グローバル
 disp_mode = 0
 
-co2_interval = 1     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
+co2_interval = 1000     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
 TIMEOUT = 5    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 CO2_RED = 1500  # co2濃度の赤色閾値（ppm） LEDも点滅
 CO2_YELLOW = 1000  # co2濃度の黄色閾値（ppm）
@@ -67,9 +67,9 @@ class GraphData:
 
         index_list = list(range(self.start, self.size)) +  list(range(0, self.end))
         index_list.reverse()
-        for i in index_list:
+        for i,index in enumerate(index_list):
             # set line color from co2 value
-            val = self.buffer[index_list[i]]
+            val = self.buffer[index_list[index]]
             if val >= CO2_RED:
                 col = DARK_RED
             elif val >= CO2_YELLOW:
@@ -83,7 +83,7 @@ class GraphData:
                 lcd.line(x - 100, y + i, x - 100 + int(val // 20), y + i, col)
             else:
                 # co2_graph_data.draw_graph(35, 240, disp_mode)
-                lcd.line(x + 100 - int(val //20), y-(self.size-i), x+100, y-(self.size-i), col)
+                lcd.line(x + 100 - int(val //20), y - i, x+100, y - i, col)
 
         # red/yellow border lines
         lcd.font(lcd.FONT_DejaVu18, rotate=90)
@@ -336,7 +336,7 @@ btnA.wasPressed(buttonA_wasPressed)
 btnB.wasPressed(buttonB_wasPressed)
 
 # タイムカウンタ初期値設定
-co2_tc = utime.time()
+co2_tc = utime.ticks_ms()
 
 # preheatタイマー表示スレッド起動
 _thread.start_new_thread(threadfunc_preheat_timer_count, ())
@@ -346,24 +346,25 @@ _thread.start_new_thread(threadfunc_led_controller, ())
 
 # メインルーチン（初期設定と描画ループ）
 while True:
-    if (utime.time() - co2_tc) >= co2_interval:  # co2要求コマンド送信
+    if (utime.ticks_ms() - co2_tc) >= co2_interval:  # co2要求コマンド送信
         mhz19b_data = bytearray(9)
         mhz19b.read()  # clear buffer
         mhz19b.write(b'\xff\x01\x86\x00\x00\x00\x00\x00\x79')   # co2測定値リクエスト
-        utime.sleep_ms(100)
+        utime.sleep_ms(50)
         mhz19b.readinto(mhz19b_data, len(mhz19b_data))
         # co2測定値リクエストの応答
         if mhz19b_data[0] == 0xff and mhz19b_data[1] == 0x86 and checksum_chk(
                 mhz19b_data):    # 応答かどうかの判定とチェックサムチェック
-            co2_tc = utime.time()
+            co2_tc = utime.ticks_ms()
             co2 = mhz19b_data[2] * 256 + mhz19b_data[3]
             co2_graph_data.add(co2)
             data_mute = False
             draw()
 
-    if (utime.time() - co2_tc) >= TIMEOUT:  # co2応答が一定時間無い場合はCO2値表示のみオフ
+        gc.collect()
+
+    if (utime.ticks_ms() - co2_tc) >= TIMEOUT:  # co2応答が一定時間無い場合はCO2値表示のみオフ
         data_mute = True
         draw()
 
-    utime.sleep_ms(100)
-    gc.collect()
+    utime.sleep_ms(10)
