@@ -13,18 +13,20 @@ data_mute = False  # グローバル
 disp_mode = 0
 
 co2_interval = 1000     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
-TIMEOUT = 5    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
+TIMEOUT = 5000    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 CO2_RED = 1500  # co2濃度の赤色閾値（ppm） LEDも点滅
 CO2_YELLOW = 1000  # co2濃度の黄色閾値（ppm）
 co2 = 0
 co2_str = '---'
-preheat_count = 60  # センサー安定後数値が取れるようになるまでの時間 MH-19B :180 MH-19C:60
+preheat_count_sec = 60  # センサー安定後数値が取れるようになるまでの時間 MH-19B :180 MH-19C:60
 
 preheat_status = ""
 preheat_status_fc = lcd.BLACK
 
-DARK_RED = 0x7F0000
+DARK_RED = 0x6F0000
 DARK_YELLOW = 0x5F5F00
+DARKER_RED = 0x4F0000
+DARKER_YELLOW = 0x2F3F00
 DARK_WHITE = 0x3F3F3F
 
 
@@ -38,26 +40,26 @@ class GraphData:
         self.start = 0
         self.end = 0
         self.size = size
+        self.filled = False
 
     def __len__(self):
-        return self.end - self.start
-
-        self.size = size
+        if self.start == 0:
+            return self.end
+        else:
+            return self.size
 
     def add(self, val):
         self.buffer[self.end] = val
         self.end = (self.end + 1) % len(self.buffer)
 
-    def get(self, index=None):
-        if index is not None:
-            return self.buffer[index]
-
-        value = self.buffer[self.top]
-        self.top = (self.top + 1) % len(self.buffer)
-        return value
+        if self.filled:
+            self.start = (self.start + 1) % len(self.buffer)
+        elif self.end == 0:
+            self.filled = True
 
     # lcd x(graph height) 100 20ppm=1dot
     # lcd y(graph width)  100  1 sec=1dot
+
     def draw_graph(self, x, y, disp_mode_):
         global CO2_RED
         global CO2_YELLOW
@@ -65,11 +67,19 @@ class GraphData:
         global DARK_YELLOW
         global DARK_WHITE
 
-        index_list = list(range(self.start, self.size)) +  list(range(0, self.end))
-        index_list.reverse()
-        for i,index in enumerate(index_list):
+        if self.filled:
+            index_list = [
+                (x %
+                 self.size) for x in range(
+                    self.start,
+                    self.start +
+                    self.size)]
+        else:
+            index_list = list(range(self.start, self.end))
+
+        for i, idx in enumerate(index_list):
             # set line color from co2 value
-            val = self.buffer[index_list[index]]
+            val = self.buffer[idx]
             if val >= CO2_RED:
                 col = DARK_RED
             elif val >= CO2_YELLOW:
@@ -83,23 +93,33 @@ class GraphData:
                 lcd.line(x - 100, y + i, x - 100 + int(val // 20), y + i, col)
             else:
                 # co2_graph_data.draw_graph(35, 240, disp_mode)
-                lcd.line(x + 100 - int(val //20), y - i, x+100, y - i, col)
+                lcd.line(x + 100 - int(val // 20), y - i, x + 100, y - i, col)
 
         # red/yellow border lines
-        lcd.font(lcd.FONT_DejaVu18, rotate=90)
         if disp_mode == 1:
+            lcd.font(lcd.FONT_DejaVu18, rotate=90)
             # red line
-            lcd.print(str(CO2_RED), x - 100 + int(CO2_RED // 20) + 20, 5, DARK_RED)
-            lcd.line(x - 100 + int(CO2_RED // 20), 0, x - 100 + int(CO2_RED // 20), 240, DARK_RED)
+            lcd.print(str(CO2_RED), x - 100 +
+                      int(CO2_RED // 20) + 20, 5, DARKER_RED)
+            lcd.line(x - 100 + int(CO2_RED // 20), 0, x -
+                     100 + int(CO2_RED // 20), 240, DARKER_RED)
             # yellow line
-            lcd.print(str(CO2_YELLOW), x - 100 + int(CO2_YELLOW // 20) + 20, 5, DARK_YELLOW)
-            lcd.line(x - 100 + int(CO2_YELLOW // 20), 0, x - 100 + int(CO2_YELLOW // 20), 240, DARK_YELLOW)
+            lcd.print(str(CO2_YELLOW), x - 100 +
+                      int(CO2_YELLOW // 20) + 20, 5, DARKER_YELLOW)
+            lcd.line(x - 100 + int(CO2_YELLOW // 20), 0, x -
+                     100 + int(CO2_YELLOW // 20), 240, DARKER_YELLOW)
         else:
+            lcd.font(lcd.FONT_DejaVu18, rotate=270)
             # red line
-            lcd.line(x + 100 - int(CO2_RED // 20), 0, x + 100 - int(CO2_RED // 20), 240, DARK_RED)
+            lcd.print(str(CO2_RED), x + 100 -
+                      int(CO2_RED // 20) - 20, 222, DARKER_RED)
+            lcd.line(x + 100 - int(CO2_RED // 20), 0, x +
+                     100 - int(CO2_RED // 20), 240, DARKER_RED)
             # yellow line
-            lcd.line(x + 100 - int(CO2_YELLOW // 20), 0, x + 100 - int(CO2_YELLOW // 20), 240, DARK_YELLOW)
-
+            lcd.print(str(CO2_YELLOW), x + 100 -
+                      int(CO2_YELLOW // 20) - 20, 222, DARKER_YELLOW)
+            lcd.line(x + 100 - int(CO2_YELLOW // 20), 0, x +
+                     100 - int(CO2_YELLOW // 20), 240, DARKER_YELLOW)
 
 
 co2_graph_data = GraphData(240)
@@ -174,15 +194,15 @@ def buttonB_wasPressed():
 
 def threadfunc_preheat_timer_count():
     global preheat_status
-    global preheat_count
+    global preheat_count_sec
     global preheat_status_fc
     global preheat_status
 
     while True:
-        if preheat_count > 0:
+        if preheat_count_sec > 0:
             preheat_status_fc = lcd.YELLOW
-            preheat_status = "Preheating... " + str(preheat_count)
-            preheat_count = preheat_count - 1
+            preheat_status = "Preheating... " + str(preheat_count_sec)
+            preheat_count_sec = preheat_count_sec - 1
         else:
             preheat_status_fc = lcd.WHITE
             preheat_status = "OK"
@@ -192,13 +212,12 @@ def threadfunc_preheat_timer_count():
 
 
 # 表示モード切替時の枠描画処理関数
-def draw():
+def draw(co2):
     global disp_mode
     global lcd_mute
     global data_mute
     global CO2_RED
     global CO2_YELLOW
-    global co2
     global co2_str
     global preheat_status
     global preheat_status_fc
@@ -234,12 +253,12 @@ def draw():
 
         # "CO2 ppm" string
         lcd.font(lcd.FONT_DejaVu18, rotate=90)  # 単位(ppm)の表示
-        lcd.print('CO2 ppm', 103, 130, fc)
+        lcd.print('CO2 ppm', 103, 130, lcd.DARKGREY)
 
         # CO2 value
         lcd.font(lcd.FONT_DejaVu72, rotate=90)  # co2値の表示
         co2_str_w = int(lcd.textWidth(co2_str))
-        lcd.print(co2_str, 70, (210 - co2_str_w), fc)
+        lcd.print(co2_str, 70, (230 - co2_str_w), fc)
 
     else:
         # draw graph
@@ -254,7 +273,7 @@ def draw():
 
         # "CO2 ppm" string
         lcd.font(lcd.FONT_DejaVu18, rotate=270)  # 単位(ppm)の表示
-        lcd.print('CO2 ppm', 32, 110, fc)
+        lcd.print('CO2 ppm', 32, 110, lcd.DARKGREY)
 
         # CO2 value
         lcd.font(lcd.FONT_DejaVu72, rotate=0)  # co2値の表示
@@ -338,6 +357,12 @@ btnB.wasPressed(buttonB_wasPressed)
 # タイムカウンタ初期値設定
 co2_tc = utime.ticks_ms()
 
+
+for i in range(235):
+    co2_graph_data.add(i * 8)
+
+utime.sleep_ms(1000)
+
 # preheatタイマー表示スレッド起動
 _thread.start_new_thread(threadfunc_preheat_timer_count, ())
 
@@ -350,7 +375,7 @@ while True:
         mhz19b_data = bytearray(9)
         mhz19b.read()  # clear buffer
         mhz19b.write(b'\xff\x01\x86\x00\x00\x00\x00\x00\x79')   # co2測定値リクエスト
-        utime.sleep_ms(50)
+        utime.sleep_ms(100)
         mhz19b.readinto(mhz19b_data, len(mhz19b_data))
         # co2測定値リクエストの応答
         if mhz19b_data[0] == 0xff and mhz19b_data[1] == 0x86 and checksum_chk(
@@ -359,12 +384,12 @@ while True:
             co2 = mhz19b_data[2] * 256 + mhz19b_data[3]
             co2_graph_data.add(co2)
             data_mute = False
-            draw()
+            draw(co2)
 
         gc.collect()
 
     if (utime.ticks_ms() - co2_tc) >= TIMEOUT:  # co2応答が一定時間無い場合はCO2値表示のみオフ
         data_mute = True
-        draw()
+        draw(0)
 
-    utime.sleep_ms(10)
+    utime.sleep_ms(500)
