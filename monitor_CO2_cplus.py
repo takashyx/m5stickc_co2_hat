@@ -64,11 +64,11 @@ class GraphData:
             # set line color from co2 value
             val = self.buffer[index_list[i]]
             if val >= CO2_RED:
-                col = lcd.RED
+                col = 0x7F0000 # dark red
             elif val >= CO2_YELLOW:
-                col = lcd.YELLOW
+                col = 0x5F5F00 # dark yellow
             else:
-                col = lcd.DARKGREY
+                col = 0x3F3F3F # dark grey
 
             # draw graph
             if disp_mode_ == 1:
@@ -199,6 +199,9 @@ def draw():
     lcd.fillScreen(lcd.BLACK)
 
     if disp_mode == 1:  # 表示回転処理
+        # draw graph
+        co2_graph_data.draw_graph(100, 0, disp_mode)
+
         # status
         lcd.font(lcd.FONT_DejaVu18, rotate=90)
         lcd.print(preheat_status, 131, 30, preheat_status_fc)
@@ -210,15 +213,15 @@ def draw():
         lcd.font(lcd.FONT_DejaVu18, rotate=90)  # 単位(ppm)の表示
         lcd.print('CO2 ppm', 103, 130, fc)
 
-        # draw graph
-        co2_graph_data.draw_graph(100, 0, disp_mode)
-
         # CO2 value
         lcd.font(lcd.FONT_DejaVu72, rotate=90)  # co2値の表示
         co2_str_w = int(lcd.textWidth(co2_str))
         lcd.print(co2_str, 70, (210 - co2_str_w), fc)
 
     else:
+        # draw graph
+        co2_graph_data.draw_graph(35, 240, disp_mode)
+
         # status
         lcd.font(lcd.FONT_DejaVu18, rotate=270)
         lcd.print(preheat_status, 4, 210, preheat_status_fc)
@@ -229,9 +232,6 @@ def draw():
         # "CO2 ppm" string
         lcd.font(lcd.FONT_DejaVu18, rotate=270)  # 単位(ppm)の表示
         lcd.print('CO2 ppm', 32, 110, fc)
-
-        # draw graph
-        co2_graph_data.draw_graph(35, 240, disp_mode)
 
         # CO2 value
         lcd.font(lcd.FONT_DejaVu72, rotate=0)  # co2値の表示
