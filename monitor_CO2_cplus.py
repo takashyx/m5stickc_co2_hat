@@ -59,6 +59,7 @@ class GraphData:
         global CO2_YELLOW
 
         index_list = list(range(self.start, self.size)) +  list(range(0, self.end))
+        index_list.reverse()
         for i in index_list:
             # set line color from co2 value
             val = self.buffer[index_list[i]]
