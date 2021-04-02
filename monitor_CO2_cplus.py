@@ -23,6 +23,10 @@ preheat_count = 60  # センサー安定後数値が取れるようになるま�
 preheat_status = ""
 preheat_status_fc = lcd.BLACK
 
+DARK_RED = 0x7F0000
+DARK_YELLOW = 0x5F5F00
+DARK_WHITE = 0x3F3F3F
+
 
 # graph class ring buffer and draw
 class GraphData:
@@ -57,6 +61,9 @@ class GraphData:
     def draw_graph(self, x, y, disp_mode_):
         global CO2_RED
         global CO2_YELLOW
+        global DARK_RED
+        global DARK_YELLOW
+        global DARK_WHITE
 
         index_list = list(range(self.start, self.size)) +  list(range(0, self.end))
         index_list.reverse()
@@ -64,18 +71,23 @@ class GraphData:
             # set line color from co2 value
             val = self.buffer[index_list[i]]
             if val >= CO2_RED:
-                col = 0x7F0000 # dark red
+                col = DARK_RED
             elif val >= CO2_YELLOW:
-                col = 0x5F5F00 # dark yellow
+                col = DARK_YELLOW
             else:
-                col = 0x3F3F3F # dark grey
+                col = DARK_WHITE
 
             # draw graph
             if disp_mode_ == 1:
                 # co2_graph_data.draw_graph(100, 0, disp_mode)
+                # red line
+                lcd.line(x - 100 + int(CO2_RED // 20), 0, x - 100 + int(CO2_RED // 20), 240, DARK_RED)
+                lcd.line(x - 100 + int(CO2_YELLOW // 20), 0, x - 100 + int(CO2_YELLOW // 20), 240, DARK_YELLOW)
                 lcd.line(x - 100, y + i, x - 100 + int(val // 20), y + i, col)
             else:
                 # co2_graph_data.draw_graph(35, 240, disp_mode)
+                lcd.line(x + 100 - int(CO2_RED // 20), 0, x + 100 - int(CO2_RED // 20), 240, DARK_RED)
+                lcd.line(x + 100 - int(CO2_YELLOW // 20), 0, x + 100 - int(CO2_YELLOW // 20), 240, DARK_YELLOW)
                 lcd.line(x + 100 - int(val //20), y-(self.size-i), x+100, y-(self.size-i), col)
 
 
