@@ -7,50 +7,11 @@ import _thread
 import math
 
 
-# graph class ring buffer and draw
-class GraphData:
-    def __init__(self, size):
-        self.buffer = [0 for i in range(0, size)]
-        self.start = 0
-        self.end = size - 1
-        self.size = size
-
-    def log(self, val):
-        self.buffer[self.end] = val
-        self.end = (self.end + 1) % len(self.buffer)
-
-    def get(self):
-        val = self.buffer[self.start]
-        self.start = (self.start + 1) % len(self.buffer)
-        return val
-
-    def __len__(self):
-        return self.end - self.start
-
-    # lcd x(graph height) 100 20ppm=1dot
-    # lcd y(graph width)  100  10 sec=1dot
-    def draw_graph(self, x, y):
-        for i in range(0, self.size):
-            val = self.buffer[i]
-            # set line color from co2 value
-            if val > CO2_RED:
-                col = lcd.RED
-            elif val > CO2_YELLOW:
-                col = lcd.YELLOW
-            else:
-                col = lcd.WHITE
-
-            # draw graph
-            if disp_mode == 1:
-                lcd.line(x - 100, y + i, x - 100 + int(val // 20), y + i, col)
-            else:
-                lcd.line(x + 100, y - i, x + 100 - int(val // 20), y - i, col)
-
-
 # 変数宣言
-disp_mode = 0     # グローバル
 lcd_mute = False  # グローバル
 data_mute = False  # グローバル
+disp_mode = 0
+
 co2_interval = 1     # MH-19B/Cへco2測定値要求コマンドを送るサイクル（秒）
 TIMEOUT = 5    # 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 CO2_RED = 1500  # co2濃度の赤色閾値（ppm） LEDも点滅
@@ -62,11 +23,65 @@ preheat_count = 60  # センサー安定後数値が取れるようになるま�
 preheat_status = ""
 preheat_status_fc = lcd.BLACK
 
-co2_graph_data = GraphData(100)
+
+# graph class ring buffer and draw
+class GraphData:
+    global CO2_RED
+    global CO2_YELLOW
+
+    def __init__(self, size):
+        self.buffer = [0 for i in range(0, size)]
+        self.start = 0
+        self.end = 0
+        self.size = size
+
+    def __len__(self):
+        return self.end - self.start
+
+        self.size = size
+
+    def add(self, val):
+        self.buffer[self.end] = val
+        self.end = (self.end + 1) % len(self.buffer)
+
+    def get(self, index=None):
+        if index is not None:
+            return self.buffer[index]
+
+        value = self.buffer[self.top]
+        self.top = (self.top + 1) % len(self.buffer)
+        return value
+
+    # lcd x(graph height) 100 20ppm=1dot
+    # lcd y(graph width)  100  1 sec=1dot
+    def draw_graph(self, x, y, disp_mode_):
+        global CO2_RED
+        global CO2_YELLOW
+
+        index_list = list(range(self.start, self.size)) +  list(range(0, self.end))
+        for i in index_list:
+            # set line color from co2 value
+            val = self.buffer[index_list[i]]
+            if val >= CO2_RED:
+                col = lcd.RED
+            elif val >= CO2_YELLOW:
+                col = lcd.YELLOW
+            else:
+                col = lcd.DARKGREY
+
+            # draw graph
+            if disp_mode_ == 1:
+                # co2_graph_data.draw_graph(100, 0, disp_mode)
+                lcd.line(x - 100, y + i, x - 100 + int(val // 20), y + i, col)
+            else:
+                # co2_graph_data.draw_graph(35, 240, disp_mode)
+                lcd.line(x + 100 - int(val //20), y-(self.size-i), x+100, y-(self.size-i), col)
+
+
+co2_graph_data = GraphData(240)
+
 
 # @cinimlさんのファーム差分吸収ロジック
-
-
 class AXPCompat(object):
     def __init__(self):
         if(hasattr(axp, 'setLDO2Vol')):
@@ -134,7 +149,6 @@ def buttonB_wasPressed():
 
 
 def threadfunc_preheat_timer_count():
-    global disp_mode
     global preheat_status
     global preheat_count
     global preheat_status_fc
@@ -196,7 +210,7 @@ def draw():
         lcd.print('CO2 ppm', 103, 130, fc)
 
         # draw graph
-        co2_graph_data.draw_graph(100, 0)
+        co2_graph_data.draw_graph(100, 0, disp_mode)
 
         # CO2 value
         lcd.font(lcd.FONT_DejaVu72, rotate=90)  # co2値の表示
@@ -216,7 +230,7 @@ def draw():
         lcd.print('CO2 ppm', 32, 110, fc)
 
         # draw graph
-        co2_graph_data.draw_graph(80, 240)
+        co2_graph_data.draw_graph(35, 240, disp_mode)
 
         # CO2 value
         lcd.font(lcd.FONT_DejaVu72, rotate=0)  # co2値の表示
@@ -319,7 +333,7 @@ while True:
                 mhz19b_data):    # 応答かどうかの判定とチェックサムチェック
             co2_tc = utime.time()
             co2 = mhz19b_data[2] * 256 + mhz19b_data[3]
-            co2_graph_data.log(co2)
+            co2_graph_data.add(co2)
             data_mute = False
             draw()
 
