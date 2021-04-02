@@ -80,15 +80,26 @@ class GraphData:
             # draw graph
             if disp_mode_ == 1:
                 # co2_graph_data.draw_graph(100, 0, disp_mode)
-                # red line
-                lcd.line(x - 100 + int(CO2_RED // 20), 0, x - 100 + int(CO2_RED // 20), 240, DARK_RED)
-                lcd.line(x - 100 + int(CO2_YELLOW // 20), 0, x - 100 + int(CO2_YELLOW // 20), 240, DARK_YELLOW)
                 lcd.line(x - 100, y + i, x - 100 + int(val // 20), y + i, col)
             else:
                 # co2_graph_data.draw_graph(35, 240, disp_mode)
-                lcd.line(x + 100 - int(CO2_RED // 20), 0, x + 100 - int(CO2_RED // 20), 240, DARK_RED)
-                lcd.line(x + 100 - int(CO2_YELLOW // 20), 0, x + 100 - int(CO2_YELLOW // 20), 240, DARK_YELLOW)
                 lcd.line(x + 100 - int(val //20), y-(self.size-i), x+100, y-(self.size-i), col)
+
+        # red/yellow border lines
+        lcd.font(lcd.FONT_DejaVu18, rotate=90)
+        if disp_mode == 1:
+            # red line
+            lcd.print(str(CO2_RED), x - 100 + int(CO2_RED // 20) + 20, 5, DARK_RED)
+            lcd.line(x - 100 + int(CO2_RED // 20), 0, x - 100 + int(CO2_RED // 20), 240, DARK_RED)
+            # yellow line
+            lcd.print(str(CO2_YELLOW), x - 100 + int(CO2_YELLOW // 20) + 20, 5, DARK_YELLOW)
+            lcd.line(x - 100 + int(CO2_YELLOW // 20), 0, x - 100 + int(CO2_YELLOW // 20), 240, DARK_YELLOW)
+        else:
+            # red line
+            lcd.line(x + 100 - int(CO2_RED // 20), 0, x + 100 - int(CO2_RED // 20), 240, DARK_RED)
+            # yellow line
+            lcd.line(x + 100 - int(CO2_YELLOW // 20), 0, x + 100 - int(CO2_YELLOW // 20), 240, DARK_YELLOW)
+
 
 
 co2_graph_data = GraphData(240)
