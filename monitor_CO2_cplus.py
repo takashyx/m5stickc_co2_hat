@@ -165,7 +165,7 @@ def threadfunc_preheat_timer_count():
             preheat_status = "OK"
             break
 
-        utime.sleep_ms(100)
+        utime.sleep_ms(1000)
 
 
 # 表示モード切替時の枠描画処理関数
@@ -327,7 +327,7 @@ while True:
         mhz19b_data = bytearray(9)
         mhz19b.read()  # clear buffer
         mhz19b.write(b'\xff\x01\x86\x00\x00\x00\x00\x00\x79')   # co2測定値リクエスト
-        utime.sleep(0.1)
+        utime.sleep_ms(100)
         mhz19b.readinto(mhz19b_data, len(mhz19b_data))
         # co2測定値リクエストの応答
         if mhz19b_data[0] == 0xff and mhz19b_data[1] == 0x86 and checksum_chk(
