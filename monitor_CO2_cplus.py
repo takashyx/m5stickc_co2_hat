@@ -320,9 +320,9 @@ btnB.wasPressed(buttonB_wasPressed)
 # タイムカウンタ初期値設定
 co2_tc = utime.ticks_ms()
 
-
-for i in range(235):
-    co2_graph_data.add(i * 8)
+# dummy data for test
+# for i in range(235):
+#     co2_graph_data.add(i * 8)
 
 utime.sleep_ms(1000)
 
