@@ -15,7 +15,7 @@ CO2_YELLOW = const(1000)  # co2濃度の黄色閾値（ppm）
 DARK_RED = const(0x6F0000)
 DARK_YELLOW = const(0x5F5F00)
 DARKER_RED = const(0x4F0000)
-DARKER_YELLOW = const(0x2F3F00)
+DARKER_YELLOW = const(0x2F2F00)
 DARK_WHITE = const(0x3F3F3F)
 
 
