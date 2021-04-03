@@ -9,6 +9,15 @@
 #define TIMEOUT_MS 5000     // 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
 #define PREHEAT_SECONDS 60  // MH-Z19 preheat time 19B:180 19C:60
 
+// Internal LED
+#define LED_PIN GPIO_NUM_10
+#define LED_PWMCH 1
+#define LED_TASK_PRIORITY 2
+#define LED_TASK_CORE 0
+#define LED_CYCLE_TIME_MS 1000
+
+#define PI 3.141592653589793
+
 // LCD settings
 #define BRIGHTNESS 10
 #define LCD_WIDTH 240
@@ -24,6 +33,8 @@
 #define DARKER_YELLOW M5.Lcd.color565(47, 47, 0)
 #define DARK_WHITE M5.Lcd.color565(63, 63, 63)
 
+bool DUMMY_DATA_MODE = false;
+
 MHZ19 myMHZ19;              // Constructor for library
 HardwareSerial mySerial(1); // (ESP32 Example) create device to MH-Z19 serial
 
@@ -31,7 +42,9 @@ int preheat_remaining_ms = PREHEAT_SECONDS * 1000;
 
 unsigned long getDataTimer = 0;
 
-int history[240] = {};
+bool led_status = false;
+
+int history[LCD_WIDTH] = {};
 int historyPos = 0;
 
 TFT_eSprite framebuf = TFT_eSprite(&M5.Lcd);
@@ -40,6 +53,14 @@ void setup()
 {
     // init
     M5.begin();
+
+    // LED
+    pinMode(LED_PIN, OUTPUT);
+    ledcSetup(LED_PWMCH, 12000, 8);
+    ledcAttachPin(LED_PIN, LED_PWMCH);
+    ledcWrite(LED_PWMCH, 256);
+
+    // Display
     M5.Axp.ScreenBreath(BRIGHTNESS);
 
     // スプライト範囲の作成
@@ -58,8 +79,16 @@ void setup()
     M5.Lcd.setRotation(3);
     render();
 
-    // setup internal red LED
-    // pinMode(GPIO_NUM_10, OUTPUT);
+    if (DUMMY_DATA_MODE)
+    {
+        int speed_multiple = 5;
+        for (int i = 0; i < LCD_WIDTH; i++)
+        {
+            history[i] = int(sin(speed_multiple * 2 * PI * i / LCD_WIDTH) * 500) + 1250;
+        }
+    }
+
+    xTaskCreatePinnedToCore(led_controller_task, "ledController", 4096, NULL, LED_TASK_PRIORITY, NULL, LED_TASK_CORE);
 }
 
 void loop()
@@ -83,7 +112,8 @@ void loop()
 
         // 測定結果の表示
         historyPos = (historyPos + 1) % (sizeof(history) / sizeof(int));
-        history[historyPos] = CO2;
+        if (DUMMY_DATA_MODE == false)
+            history[historyPos] = CO2;
         render();
 
         if (preheat_remaining_ms > 0)
@@ -135,15 +165,22 @@ void render()
     auto co2_value = history[historyPos];
     auto status_col = WHITE;
     auto status_text = "OK";
+
     if (co2_value >= CO2_RED_BORDER)
     {
         status_col = RED;
         status_text = "DANGER";
+        led_status = true;
     }
-    else if (co2_value > CO2_YELLOW_BORDER)
+    else if (co2_value >= CO2_YELLOW_BORDER)
     {
         status_col = YELLOW;
         status_text = "WARNING";
+        led_status = false;
+    }
+    else
+    {
+        led_status = false;
     }
     // status
     framebuf.setTextColor(status_col);
@@ -161,4 +198,39 @@ void render()
 
     // push to LCD
     framebuf.pushSprite(0, 0);
+}
+
+void led_controller_task(void *p)
+{
+
+    for (int i = 0; i < 3; i++)
+    {
+        delay(100);
+        ledcWrite(LED_PWMCH, 0);
+        delay(100);
+        ledcWrite(LED_PWMCH, 256);
+    }
+
+    auto ts = millis();
+    auto last_ts = ts;
+    int val = 0;
+    int phase_ms = 0;
+
+    while (1)
+    {
+        ts = millis();
+        if (led_status)
+        {
+            phase_ms = (phase_ms + (ts - last_ts)) % LED_CYCLE_TIME_MS;
+            int val = int(sin(2 * PI * phase_ms / LED_CYCLE_TIME_MS) * 128) + 128;
+            ledcWrite(LED_PWMCH, val);
+            last_ts = ts;
+            delay(10);
+        }
+        else
+        {
+            ledcWrite(LED_PWMCH, 256);
+            delay(10);
+        }
+    }
 }
