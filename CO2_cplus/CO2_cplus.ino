@@ -28,7 +28,7 @@
 #define CO2_YELLOW_BORDER 1000 //co2濃度の黄色閾値（ppm）
 
 #define DARK_RED M5.Lcd.color565(111, 0, 0)
-#define DARKER_RED M5.Lcd.color565(79, 0, 0)
+#define DARKER_RED M5.Lcd.color565(95, 0, 0)
 #define DARK_YELLOW M5.Lcd.color565(95, 95, 0)
 #define DARKER_YELLOW M5.Lcd.color565(47, 47, 0)
 #define DARK_WHITE M5.Lcd.color565(63, 63, 63)
@@ -142,6 +142,8 @@ void render()
             graph_col = DARK_RED;
         else if (value > CO2_YELLOW_BORDER)
             graph_col = DARK_YELLOW;
+        else
+            graph_col = DARK_WHITE;
 
         auto value_height = min(LCD_HEIGHT, (int)(value / 20));
         framebuf.drawFastVLine(i, LCD_HEIGHT - value_height, value_height, graph_col);
@@ -156,9 +158,9 @@ void render()
 
     // border fonts
     framebuf.setTextColor(DARKER_RED);
-    framebuf.drawString(String(CO2_RED_BORDER), 5, LCD_HEIGHT - (CO2_RED_BORDER / 20) - 20, 4);
+    framebuf.drawString(String(CO2_RED_BORDER), 2, LCD_HEIGHT - (CO2_RED_BORDER / 20) - 22, 4);
     framebuf.setTextColor(DARKER_YELLOW);
-    framebuf.drawString(String(CO2_YELLOW_BORDER), 5, LCD_HEIGHT - (CO2_YELLOW_BORDER / 20) - 20, 4);
+    framebuf.drawString(String(CO2_YELLOW_BORDER), 2, LCD_HEIGHT - (CO2_YELLOW_BORDER / 20) - 22, 4);
 
     //texts
     // ppm
