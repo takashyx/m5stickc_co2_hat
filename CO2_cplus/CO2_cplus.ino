@@ -42,6 +42,7 @@ unsigned long getDataTimer = 0;
 
 bool led_on_status = false;
 bool lcd_on_status = false;
+bool lcd_dim_status = false;
 
 int history[LCD_WIDTH] = {};
 int historyPos = 0;
@@ -182,6 +183,20 @@ void render()
         {
             M5.Axp.ScreenBreath(0);
             Serial.println("turned LCD off");
+        }
+    }
+    if (M5.BtnB.wasPressed())
+    {
+        lcd_dim_status = !lcd_dim_status;
+        if (lcd_dim_status == true)
+        {
+            M5.Axp.ScreenBreath(BRIGHTNESS - 2);
+            Serial.println("dim LCD");
+        }
+        else
+        {
+            M5.Axp.ScreenBreath(BRIGHTNESS);
+            Serial.println("normal LCD");
         }
     }
 
