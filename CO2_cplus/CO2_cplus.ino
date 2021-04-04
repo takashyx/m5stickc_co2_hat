@@ -33,7 +33,7 @@
 #define DARKER_YELLOW M5.Lcd.color565(47, 47, 0)
 #define DARK_WHITE M5.Lcd.color565(63, 63, 63)
 
-bool DUMMY_DATA_MODE = false;
+bool dummy_data_mode = false;
 
 MHZ19 myMHZ19;              // Constructor for library
 HardwareSerial mySerial(1); // (ESP32 Example) create device to MH-Z19 serial
@@ -42,7 +42,8 @@ int preheat_remaining_ms = PREHEAT_SECONDS * 1000;
 
 unsigned long getDataTimer = 0;
 
-bool led_status = false;
+bool led_on_status = false;
+bool lcd_on_status = false;
 
 int history[LCD_WIDTH] = {};
 int historyPos = 0;
@@ -79,7 +80,7 @@ void setup()
     M5.Lcd.setRotation(3);
     render();
 
-    if (DUMMY_DATA_MODE)
+    if (dummy_data_mode)
     {
         int speed_multiple = 5;
         for (int i = 0; i < LCD_WIDTH; i++)
@@ -112,7 +113,7 @@ void loop()
 
         // 測定結果の表示
         historyPos = (historyPos + 1) % (sizeof(history) / sizeof(int));
-        if (DUMMY_DATA_MODE == false)
+        if (dummy_data_mode == false)
             history[historyPos] = CO2;
         render();
 
@@ -127,6 +128,22 @@ void loop()
 void render()
 {
     M5.update();
+
+    // front button to on/off LCD
+    if (M5.BtnA.wasPressed())
+    {
+        lcd_on_status = !lcd_on_status;
+        if (lcd_on_status == true)
+        {
+            M5.Axp.ScreenBreath(BRIGHTNESS);
+            Serial.println("turned LCD on");
+        }
+        else
+        {
+            M5.Axp.ScreenBreath(0);
+            Serial.println("turned LCD off");
+        }
+    }
 
     // Clear
     framebuf.fillSprite(BLACK);
@@ -172,17 +189,17 @@ void render()
     {
         status_col = RED;
         status_text = "DANGER";
-        led_status = true;
+        led_on_status = true;
     }
     else if (co2_value >= CO2_YELLOW_BORDER)
     {
         status_col = YELLOW;
         status_text = "WARNING";
-        led_status = false;
+        led_on_status = false;
     }
     else
     {
-        led_status = false;
+        led_on_status = false;
     }
     // status
     framebuf.setTextColor(status_col);
@@ -221,7 +238,7 @@ void led_controller_task(void *p)
     while (1)
     {
         ts = millis();
-        if (led_status)
+        if (led_on_status)
         {
             phase_ms = (phase_ms + (ts - last_ts)) % LED_CYCLE_TIME_MS;
             int val = int(sin(2 * PI * phase_ms / LED_CYCLE_TIME_MS) * 128) + 128;
