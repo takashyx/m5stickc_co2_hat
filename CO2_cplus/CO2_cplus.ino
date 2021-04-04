@@ -1,31 +1,30 @@
 #include <M5StickCPlus.h>
 #include "MHZ19.h"
+#include "Battery.h"
 
 // Serial IF to MH-Z19C
-#define RX_PIN 26           // Rx pin which the MHZ19 Tx pin is attached to
-#define TX_PIN 0            // Tx pin which the MHZ19 Rx pin is attached to
-#define BAUDRATE 9600       // Device to MH-Z19 Serial baudrate (should not be changed)
-#define CO2_INTERVAL_MS 500 // MH-19B or Cへco2測定値要求コマンドを送るサイクル（秒）
-#define TIMEOUT_MS 5000     // 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
-#define PREHEAT_SECONDS 60  // MH-Z19 preheat time 19B:180 19C:60
+const int RX_PIN = 26;           // Rx pin which the MHZ19 Tx pin is attached to
+const int TX_PIN = 0;            // Tx pin which the MHZ19 Rx pin is attached to
+const int BAUDRATE = 9600;       // Device to MH-Z19 Serial baudrate (should not be changed)
+const int CO2_INTERVAL_MS = 500; // MH-19B or Cへco2測定値要求コマンドを送るサイクル（秒）
+const int TIMEOUT_MS = 5000;     // 何らかの事情でCO2更新が止まった時のタイムアウト（秒）のデフォルト値
+const int PREHEAT_SECONDS = 60;  // MH-Z19 preheat time 19B:180 19C:60
 
 // Internal LED
-#define LED_PIN GPIO_NUM_10
-#define LED_PWMCH 1
-#define LED_TASK_PRIORITY 2
-#define LED_TASK_CORE 0
-#define LED_CYCLE_TIME_MS 1000
-
-#define PI 3.141592653589793
+const int LED_PIN = GPIO_NUM_10;
+const int LED_PWMCH = 1;
+const int LED_TASK_PRIORITY = 2;
+const int LED_TASK_CORE = 0;
+const int LED_CYCLE_TIME_MS = 1000;
 
 // LCD settings
-#define BRIGHTNESS 10
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 135
+const int BRIGHTNESS = 10;
+const int LCD_WIDTH = 240;
+const int LCD_HEIGHT = 135;
 
 // CO2 graph settings
-#define CO2_RED_BORDER 1500    // co2濃度の赤色閾値（ppm） LEDも点滅
-#define CO2_YELLOW_BORDER 1000 //co2濃度の黄色閾値（ppm）
+const int CO2_RED_BORDER = 1500;    // co2濃度の赤色閾値（ppm） LEDも点滅
+const int CO2_YELLOW_BORDER = 1000; //co2濃度の黄色閾値（ppm）
 
 #define DARK_RED M5.Lcd.color565(111, 0, 0)
 #define DARKER_RED M5.Lcd.color565(95, 0, 0)
@@ -33,13 +32,12 @@
 #define DARKER_YELLOW M5.Lcd.color565(47, 47, 0)
 #define DARK_WHITE M5.Lcd.color565(63, 63, 63)
 
-bool dummy_data_mode = false;
+const bool dummy_data_mode = false;
 
 MHZ19 myMHZ19;              // Constructor for library
 HardwareSerial mySerial(1); // (ESP32 Example) create device to MH-Z19 serial
 
 int preheat_remaining_ms = PREHEAT_SECONDS * 1000;
-
 unsigned long getDataTimer = 0;
 
 bool led_on_status = false;
@@ -89,7 +87,49 @@ void setup()
         }
     }
 
+    Serial.println("setup end!");
+
     xTaskCreatePinnedToCore(led_controller_task, "ledController", 4096, NULL, LED_TASK_PRIORITY, NULL, LED_TASK_CORE);
+}
+
+void drawBattery(int x, int y, int w, int h)
+{
+    auto battery_frame_color = WHITE;
+    auto battery_string_color = WHITE;
+    auto battery_bg_color = BLACK;
+    const int tokki = 4;
+
+    auto battery_color = DARKER_YELLOW;
+    if (!isUsingBattery())
+    {
+        battery_color = BLUE;
+    }
+    else if (isLowBattery())
+    {
+        battery_color = RED;
+    }
+
+    int percent = calcBatteryPercent();
+    int battery_level_width = w * percent / 100;
+
+    // background
+    framebuf.fillRect(x, y, w - tokki, h, battery_bg_color);
+    framebuf.fillRect(x + w - tokki - 1, y + (h / 4), tokki, h / 2, battery_bg_color);
+    framebuf.drawRect(x, y, w - tokki, h, battery_frame_color);
+    framebuf.drawRect(x + w - tokki - 1, y + (h / 4), tokki, h / 2, battery_frame_color);
+    framebuf.drawFastVLine(x + w - tokki - 1, y + (h / 4) + 1, (h / 2) - 2, battery_bg_color);
+
+    // gauge
+    framebuf.fillRect(x + 1, y + 1, min(w - tokki - 2, battery_level_width - 1), h - 2, battery_color);
+    if (battery_level_width - 1 > w - tokki - 2)
+    {
+        framebuf.fillRect(x + w - tokki - 1, y + (h / 4) + 1,
+                          battery_level_width - (w - tokki) - 1, (h / 2) - 2, battery_color);
+    }
+
+    // text
+    framebuf.setTextColor(battery_string_color);
+    framebuf.drawCentreString(String(percent) + "%", x + (w / 2) - (tokki / 2), y + (h / 2) - 8, 2);
 }
 
 void loop()
@@ -208,12 +248,15 @@ void render()
     if (preheat_remaining_ms > 0)
     {
         framebuf.setTextColor(YELLOW);
-        framebuf.drawRightString("Preheating... " + String(int(preheat_remaining_ms / 1000)), LCD_WIDTH - 8, 5, 2);
+        framebuf.drawRightString("init... " + String(int(preheat_remaining_ms / 1000)), LCD_WIDTH - 60, 5, 2);
     }
 
     framebuf.setTextColor(status_col);
     framebuf.drawRightString("CO2 ppm", LCD_WIDTH - 12, 30, 4);
     framebuf.drawRightString(String(co2_value), LCD_WIDTH - 8, 55, 8);
+
+    // Battery Status
+    drawBattery(185, 5, 50, 16);
 
     // push to LCD
     framebuf.pushSprite(0, 0);
