@@ -24,7 +24,7 @@ const int LCD_HEIGHT = 135;
 
 // CO2 timing controls
 const int PREHEAT_SECONDS = 0;
-const int CO2_INTERVAL_MS = 800;
+const int CO2_INTERVAL_MS = 1000;
 
 // drawing configuration
 const int RENDER_INTERVAL_MS = 500; // Must be less than  CO2_INTERVAL_MS;
